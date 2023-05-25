@@ -6,16 +6,9 @@ mod.initialized = false
 
 function mod:onRender(shaderName)
 	if mod:shouldDeHook() then return end
-
-	local isShader = shaderName == "UI_DrawPlanetariumChance_DummyShader" and true or false
-
-	if not (Game():IsPaused() and Isaac.GetPlayer(0).ControlsEnabled) and not isShader then return end -- no render when unpaused
-	if (Game():IsPaused() and Isaac.GetPlayer(0).ControlsEnabled) and isShader then return end -- no shader when paused
-
-	if shaderName ~= nil and not isShader then return end -- final failsafe
-
+	
 	mod:updateCheck()
-
+	
 	--account for screenshake offset
 	local textCoords = self.coords + Game().ScreenShakeOffset
 	local valueOutput = string.format("%.1s%%", "?")
@@ -214,7 +207,7 @@ function mod:updatePosition()
 	end
 
 	--Checks if Hard Mode and Seeded/Challenge/Daily; Seeded/Challenge have no achievements logo, and Daily Challenge has destination logo.
-	if Game().Difficulty == Difficulty.DIFFICULTY_HARD or Game():IsGreedMode() or not CanRunUnlockAchievements() then
+	if Game():IsHardMode() or Game():IsGreedMode() or Game():AchievementUnlocksDisallowed() then
 		self.coords = self.coords + Vector(0, 16)
 	end
 
@@ -318,14 +311,6 @@ mod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
 	data.lastPlayerType = playerType
 end)
 
-function CanRunUnlockAchievements() -- by Xalum
-	local machine = Isaac.Spawn(6, 11, 0, Vector.Zero, Vector.Zero, nil)
-	local achievementsEnabled = machine:Exists()
-	machine:Remove()
-
-	return achievementsEnabled
-end
-
 function TextAcceleration(frame) --Overfit distance profile for difference text slide in
 	frame = frame - 14
 	if frame > 0 then
@@ -347,14 +332,6 @@ mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.updatePlanetariumChance)
 mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, mod.init)
 mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.exit)
 
-mod:AddCallback(ModCallbacks.MC_GET_SHADER_PARAMS, mod.onRender)
-mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
+mod:AddCallback(ModCallbacks.MC_HUD_RENDER, mod.onRender)
 
 --mod:AddCallback(ModCallbacks.MC_USE_ITEM, mod.rKeyCheck, CollectibleType.COLLECTIBLE_R_KEY)
-
---Custom Shader Fix by AgentCucco
-mod:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function()
-	if #Isaac.FindByType(EntityType.ENTITY_PLAYER) == 0 then
-		Isaac.ExecuteCommand("reloadshaders")
-	end
-end)
